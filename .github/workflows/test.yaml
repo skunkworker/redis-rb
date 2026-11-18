@@ -35,7 +35,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby_distribution: [MRI, TruffleRuby]
+        ruby_distribution: [MRI, TruffleRuby, JRuby]
         ruby_version: ["3.2", "3.3", "3.4", "4.0"]
         redis_version: ["7.2.14", "7.4.9", "8.2.6", "8.8.0", "8.10.0", "8.12-rc3"]
         driver: [default, hiredis]
@@ -46,6 +46,12 @@ jobs:
           - { ruby_distribution: TruffleRuby, ruby_version: "3.2" }
           - { ruby_distribution: TruffleRuby, ruby_version: "3.3" }
           - { ruby_distribution: TruffleRuby, ruby_version: "4.0" }
+          # hiredis is a C extension; JRuby cannot load it.
+          - { ruby_distribution: JRuby, driver: hiredis }
+          # JRuby 10 tracks Ruby 3.4 compatibility; cover it on 3.4 only.
+          - { ruby_distribution: JRuby, ruby_version: "3.2" }
+          - { ruby_distribution: JRuby, ruby_version: "3.3" }
+          - { ruby_distribution: JRuby, ruby_version: "4.0" }
     env:
       REDIS_VERSION: ${{ matrix.redis_version }}
       # RedisJSON et al. ship in Redis core only from 8.0. On the 7.2/7.4 rows the module tests
@@ -76,6 +82,15 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: truffleruby
+          bundler-cache: true
+
+      # JRuby >= 10.0.5.0 is required: earlier 10.0.x releases never finish a nonblocking
+      # Socket.tcp connect, so no connection succeeds (jruby/jruby#9304, redis/redis-rb#1339).
+      - name: Set up Ruby (JRuby)
+        if: matrix.ruby_distribution == 'JRuby'
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: jruby
           bundler-cache: true
 
       - name: Install cluster gem dependencies
