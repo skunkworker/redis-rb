@@ -48,10 +48,10 @@ jobs:
           - { ruby_distribution: TruffleRuby, ruby_version: "4.0" }
           # hiredis is a C extension; JRuby cannot load it.
           - { ruby_distribution: JRuby, driver: hiredis }
-          # JRuby 10 tracks Ruby 3.4 compatibility; cover it on 3.4 only.
+          # setup-ruby's `jruby` is the newest release (10.1.x), which tracks Ruby 4.0.
           - { ruby_distribution: JRuby, ruby_version: "3.2" }
           - { ruby_distribution: JRuby, ruby_version: "3.3" }
-          - { ruby_distribution: JRuby, ruby_version: "4.0" }
+          - { ruby_distribution: JRuby, ruby_version: "3.4" }
     env:
       REDIS_VERSION: ${{ matrix.redis_version }}
       # RedisJSON et al. ship in Redis core only from 8.0. On the 7.2/7.4 rows the module tests
@@ -84,8 +84,10 @@ jobs:
           ruby-version: truffleruby
           bundler-cache: true
 
-      # JRuby >= 10.0.5.0 is required: earlier 10.0.x releases never finish a nonblocking
-      # Socket.tcp connect, so no connection succeeds (jruby/jruby#9304, redis/redis-rb#1339).
+      # JRuby >= 10.0.7.0 is required. Earlier 10.0.x releases cannot connect to "localhost":
+      # Socket.tcp never finished a nonblocking connect (jruby/jruby#9304, fixed in 10.0.5.0),
+      # and the fast-fallback loop raised instead of trying IPv4 after a refused IPv6 connect
+      # (jruby/jruby#8786, fixed in 10.0.7.0).
       - name: Set up Ruby (JRuby)
         if: matrix.ruby_distribution == 'JRuby'
         uses: ruby/setup-ruby@v1
